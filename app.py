@@ -7,9 +7,30 @@ from PIL import Image
 import numpy as np
 from streamlit_drawable_canvas import st_canvas
 
-# Para TTS
-from gtts import gTTS
+# Nuevas importaciones
+import random
 import io
+import tempfile
+import time
+
+# Intentos para TTS/Serial (no son obligatorios, el código funciona aunque no estén instalados)
+try:
+    from gtts import gTTS
+    _HAS_GTTS = True
+except Exception:
+    _HAS_GTTS = False
+
+try:
+    import pyttsx3
+    _HAS_PYTTSX3 = True
+except Exception:
+    _HAS_PYTTSX3 = False
+
+try:
+    import serial
+    _HAS_PYSERIAL = True
+except Exception:
+    _HAS_PYSERIAL = False
 
 # ============================
 # Variables
@@ -26,12 +47,12 @@ if 'full_response' not in st.session_state:
     st.session_state.full_response = ""
 if 'base64_image' not in st.session_state:
     st.session_state.base64_image = ""
-if 'probability_result' not in st.session_state:
-    st.session_state.probability_result = None
-if 'servo_angle' not in st.session_state:
-    st.session_state.servo_angle = None
-if 'tts_audio' not in st.session_state:
-    st.session_state.tts_audio = None
+if 'last_probability' not in st.session_state:
+    st.session_state.last_probability = None
+if 'last_angle' not in st.session_state:
+    st.session_state.last_angle = None
+if 'tts_audio_bytes' not in st.session_state:
+    st.session_state.tts_audio_bytes = None
 
 # ============================
 # Función para convertir imagen a Base64
@@ -88,13 +109,8 @@ canvas_result = st_canvas(
 # ============================
 ke = st.text_input('Ingresa tu Clave Mágica (API Key)', type="password")
 os.environ['OPENAI_API_KEY'] = ke
-api_key = os.environ.get('OPENAI_API_KEY', '')
-client = None
-if api_key:
-    try:
-        client = OpenAI(api_key=api_key)
-    except Exception:
-        client = None
+api_key = os.environ['OPENAI_API_KEY']
+client = OpenAI(api_key=api_key)
 
 # ============================
 # Botón para análisis
@@ -147,14 +163,14 @@ if canvas_result.image_data is not None and api_key and analyze_button:
             st.error(f"Ocurrió un error en la lectura de tu destino: {e}")
 
 # ============================
-# Mostrar resultado y nuevos botones
+# Mostrar resultado y nuevas interacciones
 # ============================
 if st.session_state.analysis_done:
     st.divider()
     st.subheader("𓁻 Tu destino revelado 𓁻")
     st.markdown(f"{st.session_state.full_response}")
 
-    # Generar consejo del destino (igual que antes)
+    # Generar consejo del destino
     with st.spinner("Consultando un consejo del destino..."):
         consejo_prompt = (
             f"Basado en esta predicción del futuro: '{st.session_state.full_response}', "
@@ -177,144 +193,145 @@ if st.session_state.analysis_done:
     st.subheader("⋆.˚Consejo del destino⋆.˚")
     st.markdown(consejo_texto)
 
-    # -------------------------
-    # NUEVO: Dos botones: Probabilidad y Leer predicción
-    # -------------------------
     st.divider()
-    st.subheader("Acciones adicionales")
+    st.subheader("Interacciones adicionales")
 
-    col1, col2 = st.columns([1,1])
+    # --------------------
+    # Botón 1: Probabilidad (alto/medio/bajo) -> random -> opcional enviar a Arduino
+    # --------------------
+    st.markdown("**¿Quieres saber qué tan probable es este futuro?**")
+    col1, col2 = st.columns([1, 1])
+
     with col1:
         prob_button = st.button("Calcular probabilidad")
-    with col2:
-        tts_button = st.button("Leer predicción")
 
-    # --- Lectura (TTS) ---
-    if tts_button:
-        try:
-            if not st.session_state.full_response:
-                st.warning("No hay predicción para leer.")
-            else:
-                # Generar audio con gTTS
-                tts = gTTS(text=st.session_state.full_response, lang='es')
-                mp3_fp = io.BytesIO()
-                tts.write_to_fp(mp3_fp)
-                mp3_fp.seek(0)
-                st.session_state.tts_audio = mp3_fp.read()
-                st.success("Reproduciendo la predicción...")
-                st.audio(st.session_state.tts_audio, format='audio/mp3')
-        except Exception as e:
-            st.error(f"No se pudo generar la lectura: {e}")
+    # Opciones para Arduino / Serial (solo visibles si el usuario quiere enviar)
+    with st.expander("Opciones de implementación en servo (Arduino) — opcional"):
+        st.markdown("Si deseas, puedes enviar el resultado al Arduino/servo. Se enviará el ángulo (ej. 30, 90, 150).")
+        serial_port = st.text_input("Puerto serie (ej. COM3 o /dev/ttyUSB0)", value="")
+        baudrate = st.number_input("Baudrate", min_value=300, max_value=115200, value=9600, step=1)
+        enviar_serial = st.checkbox("Enviar resultado al Arduino/servo vía Serial (siempre que pyserial esté instalado)")
 
-    # --- Cálculo de probabilidad ---
     if prob_button:
-        if not api_key:
-            st.error("Necesitas ingresar tu Clave Mágica (API Key) para que el Oráculo calcule la probabilidad.")
-        else:
-            with st.spinner("El Oráculo está evaluando la probabilidad..."):
-                prob_prompt = (
-                    "Eres un analista místico. Lee la siguiente predicción y evalúa qué tan probable es que ese futuro "
-                    "se cumpla: \n\n"
-                    f"Predicción:\n{st.session_state.full_response}\n\n"
-                    "Devuélvelo en formato JSON simple: {\"label\":\"ALTO|MEDIO|BAJO\",\"confidence\":<porcentaje entre 0 y 100>,"
-                    "\"reason\":\"una frase breve explicando por qué\"}. Solo devuelve JSON."
-                )
+        # elección aleatoria
+        choice = random.choice(["Bajo", "Medio", "Alto"])
+        # Mapear a ángulos para servo
+        angle_map = {"Bajo": 30, "Medio": 90, "Alto": 150}
+        angle = angle_map[choice]
+
+        st.session_state.last_probability = choice
+        st.session_state.last_angle = angle
+
+        st.success(f"Probabilidad estimada: **{choice}**")
+        st.info(f"Mapa práctico para servo: {choice} → {angle}° (Izq/Centro/Der)")
+
+        # Intentar enviar por serial si el usuario lo pidió
+        if enviar_serial:
+            if not _HAS_PYSERIAL:
+                st.error("pyserial no está instalado en este entorno. Instálalo (pip install pyserial) para enviar datos al Arduino.")
+            elif not serial_port:
+                st.warning("Ingresa el puerto serie (ej. COM3 o /dev/ttyUSB0) para enviar el ángulo al Arduino.")
+            else:
                 try:
-                    prob_resp = openai.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=[{"role": "user", "content": prob_prompt}],
-                        max_tokens=150,
-                    )
-                    prob_text = prob_resp.choices[0].message.content.strip()
-
-                    import json
-                    try:
-                        prob_json = json.loads(prob_text)
-                    except Exception:
-                        prob_json = {"label": "MEDIO", "confidence": 50, "reason": "Estimación mística automatica."}
-
-                    label = prob_json.get("label", "MEDIO")
-                    confidence = prob_json.get("confidence", 50)
-                    reason = prob_json.get("reason", "")
-
-                    angle_map = {"ALTO": 160, "ALTA": 160, "MEDIO": 90, "BAJO": 20, "BAJA": 20}
-                    servo_angle = angle_map.get(str(label).upper(), 90)
-
-                    st.session_state.probability_result = {"label": label, "confidence": confidence, "reason": reason}
-                    st.session_state.servo_angle = servo_angle
-
-                    st.success(f"Probabilidad: **{label}** — Confianza: **{confidence}%**")
-                    st.markdown(f"**Motivo:** {reason}")
-                    st.markdown(f"**Ángulo sugerido para el servo (Arduino):** **{servo_angle}°**")
+                    st.info("Intentando abrir puerto serie y enviar el ángulo...")
+                    ser = serial.Serial(serial_port, baudrate, timeout=2)
+                    time.sleep(2)  # esperar un poco a que se equilibrie la conexión
+                    send_str = f"{angle}\n"
+                    ser.write(send_str.encode('utf-8'))
+                    ser.flush()
+                    ser.close()
+                    st.success(f"Ángulo {angle} enviado correctamente al puerto {serial_port}.")
                 except Exception as e:
-                    st.error(f"No se pudo evaluar la probabilidad: {e}")
+                    st.error(f"No se pudo enviar por serial: {e}")
 
-    # Si ya se calculó la probabilidad, mostrar instrucciones Arduino (igual que antes)
-    if st.session_state.probability_result is not None:
-        st.divider()
-        st.subheader("Implementación en Servo (Arduino)")
-
-        st.markdown("""
-        **Resumen rápido**
-        - Etiqueta: `{label}`  
-        - Confianza: `{conf}%`  
-        - Ángulo sugerido: `{angle}°`  
-        """.format(
-            label=st.session_state.probability_result.get("label"),
-            conf=st.session_state.probability_result.get("confidence"),
-            angle=st.session_state.servo_angle
-        ))
-
-        st.markdown("""
-        **Cómo conectar el servo**
-        1. Señal (cable amarillo/naranja) -> Pin digital PWM (ej. D9).  
-        2. VCC (rojo) -> 5V (o alimentación externa 5V recomendada si el servo consume corriente).  
-        3. GND (marrón/negro) -> GND de Arduino (y GND común si usas fuente externa).  
-        **IMPORTANTE:** si usas una fuente externa para el servo, conecta las tierras (GND) entre Arduino y la fuente.
-        """)
-
-        st.markdown("**Sketch de Arduino (sube esto al Arduino)**")
-        arduino_code = f"""
-// Ejemplo simple: recibe la etiqueta desde el monitor serie o usa directamente el ángulo sugerido
+        # Mostrar snippet/ejemplo de Arduino para implementar en el microcontrolador:
+        st.markdown("**Ejemplo de código Arduino (para el servo) que puedes usar más adelante:**")
+        st.code("""
 #include <Servo.h>
 
 Servo myservo;
-const int servoPin = 9; // pin PWM para señal del servo
 
-void setup() {{
+void setup() {
   Serial.begin(9600);
-  myservo.attach(servoPin);
-  // Mueve el servo al ángulo sugerido inicialmente
-  int suggestedAngle = {st.session_state.servo_angle};
-  myservo.write(suggestedAngle);
-  delay(1000);
-  Serial.println("Servo movido al ángulo sugerido: " + String(suggestedAngle));
-  Serial.println("Puedes enviar un número (0-180) por el Serial para mover el servo manualmente.");
-}}
+  myservo.attach(9); // pin del servo
+}
 
-void loop() {{
-  // Si llega un número por Serial, mover al ángulo recibido
-  if (Serial.available() > 0) {{
-    String line = Serial.readStringUntil('\\n');
-    line.trim();
-    int angle = line.toInt();
-    if (angle >= 0 && angle <= 180) {{
+void loop() {
+  if (Serial.available() > 0) {
+    int angle = Serial.parseInt(); // lee el ángulo enviado por Streamlit (ej: 30, 90, 150)
+    if (angle >= 0 && angle <= 180) {
       myservo.write(angle);
-      Serial.println("Servo movido a: " + String(angle));
-    }} else {{
-      Serial.println("Enviar un ángulo válido (0-180).");
-    }}
-  }}
-  delay(50);
-}}
-"""
-        st.code(arduino_code, language='cpp')
+    }
+    // limpiar buffer
+    while (Serial.available() > 0) Serial.read();
+  }
+}
+        """, language="cpp")
 
-        st.markdown("""
-        **Uso sugerido**
-        - El Streamlit muestra el ángulo sugerido. Puedes conectar Arduino, abrir el Monitor Serial (9600 baudios) y enviar manualmente un número (por ejemplo `160`) para mover el servo.  
-        - Si quieres que Streamlit envíe el ángulo automáticamente al Arduino desde Python, necesitas instalar `pyserial` y ejecutar Streamlit en la misma máquina con acceso al puerto COM. Puedo añadir ese ejemplo si lo deseas.
-        """)
+    # --------------------
+    # Botón 2: Text-to-Speech para escuchar la predicción
+    # --------------------
+    with col2:
+        tts_button = st.button("Escuchar oráculo")
+
+    if tts_button:
+        if not st.session_state.full_response:
+            st.warning("No hay texto del oráculo para convertir en audio. Primero ejecuta 'Revela mi futuro'.")
+        else:
+            text_to_speak = st.session_state.full_response
+            # Intento con gTTS primero
+            audio_bytes = None
+            tts_error = None
+
+            if _HAS_GTTS:
+                try:
+                    tts = gTTS(text_to_speak, lang="es")
+                    bio = io.BytesIO()
+                    tts.write_to_fp(bio)
+                    bio.seek(0)
+                    audio_bytes = bio.read()
+                    st.session_state.tts_audio_bytes = audio_bytes
+                    st.success("Audio generado con gTTS.")
+                except Exception as e:
+                    tts_error = f"gTTS falló: {e}"
+
+            # Fallback a pyttsx3 (offline)
+            if audio_bytes is None and _HAS_PYTTSX3:
+                try:
+                    engine = pyttsx3.init()
+                    # crear archivo temporal WAV
+                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+                        tmp_path = f.name
+                    engine.save_to_file(text_to_speak, tmp_path)
+                    engine.runAndWait()
+                    # leer bytes
+                    with open(tmp_path, "rb") as f:
+                        audio_bytes = f.read()
+                    # remover archivo temporal
+                    try:
+                        os.remove(tmp_path)
+                    except Exception:
+                        pass
+                    st.session_state.tts_audio_bytes = audio_bytes
+                    st.success("Audio generado con pyttsx3.")
+                except Exception as e:
+                    if tts_error:
+                        tts_error += f" | pyttsx3 falló: {e}"
+                    else:
+                        tts_error = f"pyttsx3 falló: {e}"
+
+            if audio_bytes:
+                st.audio(audio_bytes, format="audio/mp3" if _HAS_GTTS else "audio/wav")
+            else:
+                st.error("No se pudo generar audio con gTTS ni pyttsx3 en este entorno.")
+                if tts_error:
+                    st.write(tts_error)
+
+    # Mostrar último resultado de probabilidad si existe
+    if st.session_state.last_probability:
+        st.divider()
+        st.markdown("**Última probabilidad calculada:**")
+        st.write(f"Probabilidad: **{st.session_state.last_probability}** — Ángulo sugerido para servo: **{st.session_state.last_angle}°**")
 
 if not api_key:
     st.warning("Por favor, ingresa tu Clave Mágica para invocar al Oráculo.")
