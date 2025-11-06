@@ -59,7 +59,7 @@ port=1883
 client1= paho.Client("GIT-HUB")
 client1.on_message = on_message
 
-if st.button('Calcular probabilidad'):
+if st.button('Calcular probabilidad',key='2'):
    
     choice = random.choice(["Bajo", "Medio", "Alto"])
         # Mapear a ángulos para servo
