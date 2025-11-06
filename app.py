@@ -244,13 +244,12 @@ if st.session_state.analysis_done:
     st.markdown("**¿Quieres saber qué tan probable es este futuro?**")
     col1, col2 = st.columns([1, 1])
 
-    with col1:
-        prob_button = st.button("Calcular probabilidad")
+    
         
 
     # ============================
-# Panel lateral
-# ============================
+    # Panel lateral
+    # ============================
 
     if st.button('Calcular probabilidad',key='2'):
    
