@@ -257,7 +257,7 @@ if st.session_state.analysis_done:
 
     if st.button('Calcular probabilidad',key='2'):
    
-    choice = random.choice(["Bajo", "Medio", "Alto"])
+        choice = random.choice(["Bajo", "Medio", "Alto"])
         # Mapear a ángulos para servo
 
     client1= paho.Client("z4m")                           
