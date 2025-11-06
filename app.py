@@ -280,47 +280,10 @@ if st.session_state.analysis_done:
         #st.info(f"Mapa práctico para servo: {choice} → {angle}° (Izq/Centro/Der)")
 
         # Intentar enviar por serial si el usuario lo pidió
-        if enviar_serial:
-            if not _HAS_PYSERIAL:
-                st.error("pyserial no está instalado en este entorno. Instálalo (pip install pyserial) para enviar datos al Arduino.")
-            elif not serial_port:
-                st.warning("Ingresa el puerto serie (ej. COM3 o /dev/ttyUSB0) para enviar el ángulo al Arduino.")
-            else:
-                try:
-                    st.info("Intentando abrir puerto serie y enviar el ángulo...")
-                    ser = serial.Serial(serial_port, baudrate, timeout=2)
-                    time.sleep(2)  # esperar un poco a que se equilibrie la conexión
-                    send_str = f"{angle}\n"
-                    ser.write(send_str.encode('utf-8'))
-                    ser.flush()
-                    ser.close()
-                    st.success(f"Ángulo {angle} enviado correctamente al puerto {serial_port}.")
-                except Exception as e:
-                    st.error(f"No se pudo enviar por serial: {e}")
+        
 
         # Mostrar snippet/ejemplo de Arduino para implementar en el microcontrolador:
-        st.markdown("**Ejemplo de código Arduino (para el servo) que puedes usar más adelante:**")
-        st.code("""
-#include <Servo.h>
-
-Servo myservo;
-
-void setup() {
-  Serial.begin(9600);
-  myservo.attach(9); // pin del servo
-}
-
-void loop() {
-  if (Serial.available() > 0) {
-    int angle = Serial.parseInt(); // lee el ángulo enviado por Streamlit (ej: 30, 90, 150)
-    if (angle >= 0 && angle <= 180) {
-      myservo.write(angle);
-    }
-    // limpiar buffer
-    while (Serial.available() > 0) Serial.read();
-  }
-}
-        """, language="cpp")
+    
 
     # --------------------
     # Botón 2: Text-to-Speech para escuchar la predicción
