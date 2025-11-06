@@ -53,16 +53,7 @@ port=1883
 client1= paho.Client("z4m")
 client1.on_message = on_message
 
-if st.button('Calcular probabilidad',key='2'):
-   
-    choice = random.choice(["Bajo", "Medio", "Alto"])
-        # Mapear a ángulos para servo
 
-    client1= paho.Client("z4m")                           
-    client1.on_publish = on_publish                          
-    client1.connect(broker,port)  
-    message =json.dumps({"Act1":choice})
-    ret= client1.publish("cmqtt_z4m", message)
  
     #client1.subscribe("Sensores")
 try:
@@ -264,18 +255,29 @@ if st.session_state.analysis_done:
         baudrate = st.number_input("Baudrate", min_value=300, max_value=115200, value=9600, step=1)
         enviar_serial = st.checkbox("Enviar resultado al Arduino/servo vía Serial (siempre que pyserial esté instalado)")
 
-    if prob_button:
-        # elección aleatoria
-        choice = random.choice(["Bajo", "Medio", "Alto"])
+    if st.button('Calcular probabilidad',key='2'):
+   
+    choice = random.choice(["Bajo", "Medio", "Alto"])
         # Mapear a ángulos para servo
-        angle_map = {"Bajo": 30, "Medio": 90, "Alto": 150}
-        angle = angle_map[choice]
 
-        st.session_state.last_probability = choice
-        st.session_state.last_angle = angle
+    client1= paho.Client("z4m")                           
+    client1.on_publish = on_publish                          
+    client1.connect(broker,port)  
+    message =json.dumps({"Act1":choice})
+    ret= client1.publish("cmqtt_z4m", message)
+    
+    #if prob_button:
+        # elección aleatoria
+        #choice = random.choice(["Bajo", "Medio", "Alto"])
+        # Mapear a ángulos para servo
+        #angle_map = {"Bajo": 30, "Medio": 90, "Alto": 150}
+        #angle = angle_map[choice]
 
-        st.success(f"Probabilidad estimada: **{choice}**")
-        st.info(f"Mapa práctico para servo: {choice} → {angle}° (Izq/Centro/Der)")
+        #st.session_state.last_probability = choice
+        #st.session_state.last_angle = angle
+
+        #st.success(f"Probabilidad estimada: **{choice}**")
+        #st.info(f"Mapa práctico para servo: {choice} → {angle}° (Izq/Centro/Der)")
 
         # Intentar enviar por serial si el usuario lo pidió
         if enviar_serial:
