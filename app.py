@@ -67,7 +67,7 @@ if st.button('Calcular probabilidad'):
     client1= paho.Client("z4m")                           
     client1.on_publish = on_publish                          
     client1.connect(broker,port)  
-    message =json.dumps({"Act1":choice)
+    message =json.dumps({"Act1":choice})
     ret= client1.publish("cmqtt_z4m", message)
  
     #client1.subscribe("Sensores")
