@@ -7,6 +7,10 @@ from PIL import Image
 import numpy as np
 from streamlit_drawable_canvas import st_canvas
 
+# Para TTS
+from gtts import gTTS
+import io
+
 # ============================
 # Variables
 # ============================
@@ -26,6 +30,8 @@ if 'probability_result' not in st.session_state:
     st.session_state.probability_result = None
 if 'servo_angle' not in st.session_state:
     st.session_state.servo_angle = None
+if 'tts_audio' not in st.session_state:
+    st.session_state.tts_audio = None
 
 # ============================
 # Función para convertir imagen a Base64
@@ -141,14 +147,14 @@ if canvas_result.image_data is not None and api_key and analyze_button:
             st.error(f"Ocurrió un error en la lectura de tu destino: {e}")
 
 # ============================
-# Mostrar resultado
+# Mostrar resultado y nuevos botones
 # ============================
 if st.session_state.analysis_done:
     st.divider()
     st.subheader("𓁻 Tu destino revelado 𓁻")
     st.markdown(f"{st.session_state.full_response}")
 
-    # Generar consejo del destino
+    # Generar consejo del destino (igual que antes)
     with st.spinner("Consultando un consejo del destino..."):
         consejo_prompt = (
             f"Basado en esta predicción del futuro: '{st.session_state.full_response}', "
@@ -172,27 +178,40 @@ if st.session_state.analysis_done:
     st.markdown(consejo_texto)
 
     # -------------------------
-    # NUEVO: Preguntar si quiere saber probabilidad
+    # NUEVO: Dos botones: Probabilidad y Leer predicción
     # -------------------------
     st.divider()
-    st.subheader("¿Quieres saber qué tan probable es este futuro?")
+    st.subheader("Acciones adicionales")
 
-    # Botones para preguntar al usuario
-    col1, col2 = st.columns([1, 1])
+    col1, col2 = st.columns([1,1])
     with col1:
-        want_prob = st.button("Sí, muéstrame la probabilidad")
+        prob_button = st.button("Calcular probabilidad")
     with col2:
-        skip_prob = st.button("No, gracias")
+        tts_button = st.button("Leer predicción")
 
-    if skip_prob:
-        st.info("Como prefieras. El Oráculo permanece a tu servicio si cambias de opinión.")
+    # --- Lectura (TTS) ---
+    if tts_button:
+        try:
+            if not st.session_state.full_response:
+                st.warning("No hay predicción para leer.")
+            else:
+                # Generar audio con gTTS
+                tts = gTTS(text=st.session_state.full_response, lang='es')
+                mp3_fp = io.BytesIO()
+                tts.write_to_fp(mp3_fp)
+                mp3_fp.seek(0)
+                st.session_state.tts_audio = mp3_fp.read()
+                st.success("Reproduciendo la predicción...")
+                st.audio(st.session_state.tts_audio, format='audio/mp3')
+        except Exception as e:
+            st.error(f"No se pudo generar la lectura: {e}")
 
-    if want_prob:
+    # --- Cálculo de probabilidad ---
+    if prob_button:
         if not api_key:
             st.error("Necesitas ingresar tu Clave Mágica (API Key) para que el Oráculo calcule la probabilidad.")
         else:
             with st.spinner("El Oráculo está evaluando la probabilidad..."):
-                # Prompt para clasificar probabilidad en Alto/Medio/Bajo y dar porcentaje estimado
                 prob_prompt = (
                     "Eres un analista místico. Lee la siguiente predicción y evalúa qué tan probable es que ese futuro "
                     "se cumpla: \n\n"
@@ -208,24 +227,19 @@ if st.session_state.analysis_done:
                     )
                     prob_text = prob_resp.choices[0].message.content.strip()
 
-                    # Intento de parse simple del JSON (sin dependencia json.loads para tolerancia)
                     import json
                     try:
                         prob_json = json.loads(prob_text)
                     except Exception:
-                        # Si el asistente no devolvió puro JSON, extraer manualmente buscando label y numbers
                         prob_json = {"label": "MEDIO", "confidence": 50, "reason": "Estimación mística automatica."}
 
                     label = prob_json.get("label", "MEDIO")
                     confidence = prob_json.get("confidence", 50)
                     reason = prob_json.get("reason", "")
 
-                    # Mapear etiqueta a ángulo de servo
-                    # Alto -> ángulo grande (ej. 160), Medio -> 90, Bajo -> 20
-                    angle_map = {"ALTO": 160, "ALTO.": 160, "ALTA": 160, "MEDIO": 90, "MEDIO.": 90, "BAJO": 20, "BAJA": 20}
+                    angle_map = {"ALTO": 160, "ALTA": 160, "MEDIO": 90, "BAJO": 20, "BAJA": 20}
                     servo_angle = angle_map.get(str(label).upper(), 90)
 
-                    # Guardar en session_state
                     st.session_state.probability_result = {"label": label, "confidence": confidence, "reason": reason}
                     st.session_state.servo_angle = servo_angle
 
@@ -235,7 +249,7 @@ if st.session_state.analysis_done:
                 except Exception as e:
                     st.error(f"No se pudo evaluar la probabilidad: {e}")
 
-    # Si ya se calculó la probabilidad, mostrar instrucciones Arduino
+    # Si ya se calculó la probabilidad, mostrar instrucciones Arduino (igual que antes)
     if st.session_state.probability_result is not None:
         st.divider()
         st.subheader("Implementación en Servo (Arduino)")
@@ -260,4 +274,47 @@ if st.session_state.analysis_done:
         """)
 
         st.markdown("**Sketch de Arduino (sube esto al Arduino)**")
-        arduino_code =_
+        arduino_code = f"""
+// Ejemplo simple: recibe la etiqueta desde el monitor serie o usa directamente el ángulo sugerido
+#include <Servo.h>
+
+Servo myservo;
+const int servoPin = 9; // pin PWM para señal del servo
+
+void setup() {{
+  Serial.begin(9600);
+  myservo.attach(servoPin);
+  // Mueve el servo al ángulo sugerido inicialmente
+  int suggestedAngle = {st.session_state.servo_angle};
+  myservo.write(suggestedAngle);
+  delay(1000);
+  Serial.println("Servo movido al ángulo sugerido: " + String(suggestedAngle));
+  Serial.println("Puedes enviar un número (0-180) por el Serial para mover el servo manualmente.");
+}}
+
+void loop() {{
+  // Si llega un número por Serial, mover al ángulo recibido
+  if (Serial.available() > 0) {{
+    String line = Serial.readStringUntil('\\n');
+    line.trim();
+    int angle = line.toInt();
+    if (angle >= 0 && angle <= 180) {{
+      myservo.write(angle);
+      Serial.println("Servo movido a: " + String(angle));
+    }} else {{
+      Serial.println("Enviar un ángulo válido (0-180).");
+    }}
+  }}
+  delay(50);
+}}
+"""
+        st.code(arduino_code, language='cpp')
+
+        st.markdown("""
+        **Uso sugerido**
+        - El Streamlit muestra el ángulo sugerido. Puedes conectar Arduino, abrir el Monitor Serial (9600 baudios) y enviar manualmente un número (por ejemplo `160`) para mover el servo.  
+        - Si quieres que Streamlit envíe el ángulo automáticamente al Arduino desde Python, necesitas instalar `pyserial` y ejecutar Streamlit en la misma máquina con acceso al puerto COM. Puedo añadir ese ejemplo si lo deseas.
+        """)
+
+if not api_key:
+    st.warning("Por favor, ingresa tu Clave Mágica para invocar al Oráculo.")
