@@ -248,12 +248,9 @@ if st.session_state.analysis_done:
         prob_button = st.button("Calcular probabilidad")
         
 
-    # Opciones para Arduino / Serial (solo visibles si el usuario quiere enviar)
-    with st.expander("Opciones de implementación en servo (Arduino) — opcional"):
-        st.markdown("Si deseas, puedes enviar el resultado al Arduino/servo. Se enviará el ángulo (ej. 30, 90, 150).")
-        serial_port = st.text_input("Puerto serie (ej. COM3 o /dev/ttyUSB0)", value="")
-        baudrate = st.number_input("Baudrate", min_value=300, max_value=115200, value=9600, step=1)
-        enviar_serial = st.checkbox("Enviar resultado al Arduino/servo vía Serial (siempre que pyserial esté instalado)")
+    # ============================
+# Panel lateral
+# ============================
 
     if st.button('Calcular probabilidad',key='2'):
    
