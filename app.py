@@ -6,14 +6,71 @@ import openai
 from PIL import Image
 import numpy as np
 from streamlit_drawable_canvas import st_canvas
-
+import paho.mqtt.client as paho
+import json
+import platform
 # Nuevas importaciones
 import random
 import io
 import tempfile
 import time
 
+
+values = 0.0
+act1="OFF"
+
+def on_publish(client,userdata,result):             #create function for callback
+    print("el dato ha sido publicado \n")
+    pass
+
+def on_message(client, userdata, message):
+    global message_received
+    time.sleep(2)
+    message_received=str(message.payload.decode("utf-8"))
+    st.write(message_received)
+
+        
+
+
+broker="157.230.214.127"
+port=1883
+client1= paho.Client("GIT-HUB")
+client1.on_message = on_message
 # Intentos para TTS/Serial (no son obligatorios, el código funciona aunque no estén instalados)
+
+values = 0.0
+act1="OFF"
+
+def on_publish(client,userdata,result):             #create function for callback
+    print("el dato ha sido publicado \n")
+    pass
+
+def on_message(client, userdata, message):
+    global message_received
+    time.sleep(2)
+    message_received=str(message.payload.decode("utf-8"))
+    st.write(message_received)
+
+        
+
+
+broker="157.230.214.127"
+port=1883
+client1= paho.Client("GIT-HUB")
+client1.on_message = on_message
+
+if st.button('Calcular probabilidad'):
+   
+    choice = random.choice(["Bajo", "Medio", "Alto"])
+        # Mapear a ángulos para servo
+
+    client1= paho.Client("z4m")                           
+    client1.on_publish = on_publish                          
+    client1.connect(broker,port)  
+    message =json.dumps({"Act1":choice)
+    ret= client1.publish("cmqtt_z4m", message)
+ 
+    #client1.subscribe("Sensores")
 try:
     from gtts import gTTS
     _HAS_GTTS = True
@@ -204,6 +261,7 @@ if st.session_state.analysis_done:
 
     with col1:
         prob_button = st.button("Calcular probabilidad")
+        
 
     # Opciones para Arduino / Serial (solo visibles si el usuario quiere enviar)
     with st.expander("Opciones de implementación en servo (Arduino) — opcional"):
