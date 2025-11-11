@@ -8,54 +8,33 @@ import numpy as np
 from streamlit_drawable_canvas import st_canvas
 import paho.mqtt.client as paho
 import json
-import platform
-# Nuevas importaciones
 import random
 import io
 import tempfile
 import time
 
+# ============================
+# MQTT CONFIGURACIÓN
+# ============================
+broker = "broker.mqttdashboard.com"
+port = 1883
 
-values = 0.0
-act1="OFF"
-
-def on_publish(client,userdata,result):             #create function for callback
-    print("el dato ha sido publicado \n")
-    pass
-
-def on_message(client, userdata, message):
-    global message_received
-    time.sleep(2)
-    message_received=str(message.payload.decode("utf-8"))
-    st.write(message_received)
-
-    
-# Intentos para TTS/Serial (no son obligatorios, el código funciona aunque no estén instalados)
-
-values = 0.0
-act1="OFF"
-
-def on_publish(client,userdata,result):             #create function for callback
-    print("el dato ha sido publicado \n")
-    pass
+def on_publish(client, userdata, result):
+    print("Dato publicado correctamente.")
 
 def on_message(client, userdata, message):
     global message_received
     time.sleep(2)
-    message_received=str(message.payload.decode("utf-8"))
+    message_received = str(message.payload.decode("utf-8"))
     st.write(message_received)
 
-        
-
-
-broker="broker.mqttdashboard.com"
-port=1883
-client1= paho.Client("z4m")
+client1 = paho.Client("z4m")
+client1.on_publish = on_publish
 client1.on_message = on_message
 
-
- 
-    #client1.subscribe("Sensores")
+# ============================
+# OPCIONALES: TTS
+# ============================
 try:
     from gtts import gTTS
     _HAS_GTTS = True
@@ -68,20 +47,8 @@ try:
 except Exception:
     _HAS_PYTTSX3 = False
 
-try:
-    import serial
-    _HAS_PYSERIAL = True
-except Exception:
-    _HAS_PYSERIAL = False
-
 # ============================
-# Variables
-# ============================
-Expert = " "
-profile_imgenh = " "
-
-# ============================
-# Inicializar session_state
+# VARIABLES DE SESIÓN
 # ============================
 if 'analysis_done' not in st.session_state:
     st.session_state.analysis_done = False
@@ -97,33 +64,31 @@ if 'tts_audio_bytes' not in st.session_state:
     st.session_state.tts_audio_bytes = None
 
 # ============================
-# Función para convertir imagen a Base64
+# FUNCIÓN: IMAGEN A BASE64
 # ============================
 def encode_image_to_base64(image_path):
     try:
         with open(image_path, "rb") as image_file:
-            encoded_image = base64.b64encode(image_file.read()).decode("utf-8")
-            return encoded_image
+            return base64.b64encode(image_file.read()).decode("utf-8")
     except FileNotFoundError:
-        return "Error: La imagen no se encontró en la ruta especificada."
+        return None
 
 # ============================
-# Interfaz principal
+# INTERFAZ PRINCIPAL
 # ============================
-st.set_page_config(page_title='Tablero Místico', layout="wide")
-st.title(' ꩜ Tablero Místico de Predicciones ꩜ ')
+st.set_page_config(page_title='꩜ Tablero Místico ꩜', layout="wide")
+st.title('꩜ Tablero Místico de Predicciones ꩜')
 
 st.markdown("""
-Bienvenido/a al Oráculo Digital
+Bienvenido/a al **Oráculo Digital**  
 ✶✶✶ Lo que traces aquí no será un simple dibujo...  
-Cada línea, cada trazo y cada forma revelará algo oculto en tu mente, y con ello... tu destino.  
-
-Dibuja sin pensar y cuando estés listo, pide al tablero que revele lo que el futuro guarda para ti.
+Cada línea revelará algo oculto en tu mente, y con ello... tu destino.  
+Dibuja sin pensar, y cuando estés listo, pide al tablero que revele lo que el futuro guarda para ti.
 ✩₊˚.⋆☾𓃦☽⋆⁺₊✧
 """)
 
 # ============================
-# Panel lateral
+# PANEL LATERAL
 # ============================
 with st.sidebar:
     st.subheader("Herramientas de tu destino")
@@ -132,32 +97,36 @@ with st.sidebar:
     bg_color = st.color_picker("Color de tu universo", "#FFFFFF")
 
 # ============================
-# Canvas para dibujar
+# CANVAS
 # ============================
-drawing_mode = "freedraw"
 canvas_result = st_canvas(
-    fill_color="rgba(255, 165, 0, 0.3)",
+    fill_color="rgba(255,165,0,0.3)",
     stroke_width=stroke_width,
     stroke_color=stroke_color,
     background_color=bg_color,
     height=350,
     width=450,
-    drawing_mode=drawing_mode,
+    drawing_mode="freedraw",
     key="canvas",
 )
 
 # ============================
-# API Key
+# API KEY
 # ============================
-ke = st.text_input('Ingresa tu Clave Mágica (API Key)', type="password")
+ke = st.text_input('🔑 Ingresa tu Clave Mágica (API Key)', type="password")
 os.environ['OPENAI_API_KEY'] = ke
-api_key = os.environ['OPENAI_API_KEY']
-client = OpenAI(api_key=api_key)
+api_key = os.getenv('OPENAI_API_KEY', '')
+client = None
+if api_key:
+    try:
+        client = OpenAI(api_key=api_key)
+    except Exception:
+        client = None
 
 # ============================
-# Botón para análisis
+# BOTÓN: ANALIZAR DIBUJO
 # ============================
-analyze_button = st.button("Revela mi futuro")
+analyze_button = st.button("🔮 Revela mi futuro")
 
 if canvas_result.image_data is not None and api_key and analyze_button:
     with st.spinner("Consultando al Oráculo..."):
@@ -170,13 +139,10 @@ if canvas_result.image_data is not None and api_key and analyze_button:
 
         prompt_text = (
             "Eres un oráculo místico. Basado en este dibujo, interpreta el destino del usuario. "
-            "Habla en tono enigmático y espiritual, como si estuvieras revelando un secreto profundo sobre su futuro. "
-            "Predice con metáforas, símbolos y un aire de misterio."
+            "Habla en tono enigmático y espiritual, con metáforas y símbolos misteriosos."
         )
 
         try:
-            full_response = ""
-            message_placeholder = st.empty()
             response = openai.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
@@ -184,167 +150,96 @@ if canvas_result.image_data is not None and api_key and analyze_button:
                         "role": "user",
                         "content": [
                             {"type": "text", "text": prompt_text},
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": f"data:image/png;base64,{base64_image}"},
-                            },
+                            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}},
                         ],
                     }
                 ],
                 max_tokens=500,
             )
-
-            if response.choices[0].message.content is not None:
-                full_response += response.choices[0].message.content
-                message_placeholder.markdown(full_response)
-
-            st.session_state.full_response = full_response
-            st.session_state.analysis_done = True
-
+            if response.choices[0].message.content:
+                st.session_state.full_response = response.choices[0].message.content
+                st.session_state.analysis_done = True
         except Exception as e:
-            st.error(f"Ocurrió un error en la lectura de tu destino: {e}")
+            st.error(f"Error en la lectura del destino: {e}")
 
 # ============================
-# Mostrar resultado y nuevas interacciones
+# RESULTADO Y OPCIONES
 # ============================
 if st.session_state.analysis_done:
     st.divider()
     st.subheader("𓁻 Tu destino revelado 𓁻")
-    st.markdown(f"{st.session_state.full_response}")
+    st.markdown(st.session_state.full_response)
 
-    # Generar consejo del destino
-    with st.spinner("Consultando un consejo del destino..."):
+    st.divider()
+    st.subheader("⋆.˚ Consejo del destino ⋆.˚")
+
+    try:
         consejo_prompt = (
-            f"Basado en esta predicción del futuro: '{st.session_state.full_response}', "
-            "genera un consejo espiritual y enigmático. "
-            "El consejo debe ser breve, inspirador y sonar como una guía del destino. "
-            "Usa metáforas y un tono místico."
+            f"Basado en esta predicción: '{st.session_state.full_response}', "
+            "genera un consejo espiritual y enigmático, breve e inspirador."
         )
-
-        try:
-            consejo_response = openai.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": consejo_prompt}],
-                max_tokens=200,
-            )
-            consejo_texto = consejo_response.choices[0].message.content
-        except Exception as e:
-            consejo_texto = f"No se pudo obtener un consejo del destino: {e}"
+        consejo = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": consejo_prompt}],
+            max_tokens=200,
+        )
+        st.markdown(consejo.choices[0].message.content)
+    except Exception as e:
+        st.warning(f"No se pudo obtener consejo: {e}")
 
     st.divider()
-    st.subheader("⋆.˚Consejo del destino⋆.˚")
-    st.markdown(consejo_texto)
+    st.subheader("✨ Interacciones adicionales ✨")
 
-    st.divider()
-    st.subheader("Interacciones adicionales")
+    col1, col2 = st.columns(2)
 
-    # --------------------
-    # Botón 1: Probabilidad (alto/medio/bajo) -> random -> opcional enviar a Arduino
-    # --------------------
-    st.markdown("**¿Quieres saber qué tan probable es este futuro?**")
-    col1, col2 = st.columns([1, 1])
+    # Probabilidad
+    with col1:
+        if st.button('Calcular probabilidad'):
+            choice = random.choice(["Bajo", "Medio", "Alto"])
+            angle_map = {"Bajo": 30, "Medio": 90, "Alto": 150}
+            angle = angle_map[choice]
+            st.session_state.last_probability = choice
+            st.session_state.last_angle = angle
+            st.success(f"Probabilidad: **{choice}** ({angle}°)")
+            
+            # Enviar MQTT
+            try:
+                client1.connect(broker, port)
+                message = json.dumps({"Act1": choice})
+                client1.publish("cmqtt_z4m", message)
+            except Exception as e:
+                st.error(f"No se pudo enviar MQTT: {e}")
 
-    
-        
-
-    # ============================
-    # Panel lateral
-    # ============================
-
-    if st.button('Calcular probabilidad',key='2'):
-   
-        choice = random.choice(["Bajo", "Medio", "Alto"])
-        # Mapear a ángulos para servo
-
-    client1= paho.Client("z4m")                           
-    client1.on_publish = on_publish                          
-    client1.connect(broker,port)  
-    message =json.dumps({"Act1":choice})
-    ret= client1.publish("cmqtt_z4m", message)
-    
-    #if prob_button:
-        # elección aleatoria
-        #choice = random.choice(["Bajo", "Medio", "Alto"])
-        # Mapear a ángulos para servo
-        #angle_map = {"Bajo": 30, "Medio": 90, "Alto": 150}
-        #angle = angle_map[choice]
-
-        #st.session_state.last_probability = choice
-        #st.session_state.last_angle = angle
-
-        #st.success(f"Probabilidad estimada: **{choice}**")
-        #st.info(f"Mapa práctico para servo: {choice} → {angle}° (Izq/Centro/Der)")
-
-        # Intentar enviar por serial si el usuario lo pidió
-        
-
-        # Mostrar snippet/ejemplo de Arduino para implementar en el microcontrolador:
-    
-
-    # --------------------
-    # Botón 2: Text-to-Speech para escuchar la predicción
-    # --------------------
+    # TTS
     with col2:
-        tts_button = st.button("Escuchar oráculo")
-
-    if tts_button:
-        if not st.session_state.full_response:
-            st.warning("No hay texto del oráculo para convertir en audio. Primero ejecuta 'Revela mi futuro'.")
-        else:
-            text_to_speak = st.session_state.full_response
-            # Intento con gTTS primero
-            audio_bytes = None
-            tts_error = None
-
-            if _HAS_GTTS:
-                try:
-                    tts = gTTS(text_to_speak, lang="es")
-                    bio = io.BytesIO()
-                    tts.write_to_fp(bio)
-                    bio.seek(0)
-                    audio_bytes = bio.read()
-                    st.session_state.tts_audio_bytes = audio_bytes
-                    st.success("Audio generado con gTTS.")
-                except Exception as e:
-                    tts_error = f"gTTS falló: {e}"
-
-            # Fallback a pyttsx3 (offline)
-            if audio_bytes is None and _HAS_PYTTSX3:
-                try:
-                    engine = pyttsx3.init()
-                    # crear archivo temporal WAV
-                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
-                        tmp_path = f.name
-                    engine.save_to_file(text_to_speak, tmp_path)
-                    engine.runAndWait()
-                    # leer bytes
-                    with open(tmp_path, "rb") as f:
-                        audio_bytes = f.read()
-                    # remover archivo temporal
-                    try:
-                        os.remove(tmp_path)
-                    except Exception:
-                        pass
-                    st.session_state.tts_audio_bytes = audio_bytes
-                    st.success("Audio generado con pyttsx3.")
-                except Exception as e:
-                    if tts_error:
-                        tts_error += f" | pyttsx3 falló: {e}"
-                    else:
-                        tts_error = f"pyttsx3 falló: {e}"
-
-            if audio_bytes:
-                st.audio(audio_bytes, format="audio/mp3" if _HAS_GTTS else "audio/wav")
+        if st.button("Escuchar oráculo"):
+            text = st.session_state.full_response
+            if not text:
+                st.warning("No hay texto para convertir en audio.")
             else:
-                st.error("No se pudo generar audio con gTTS ni pyttsx3 en este entorno.")
-                if tts_error:
-                    st.write(tts_error)
-
-    # Mostrar último resultado de probabilidad si existe
-    if st.session_state.last_probability:
-        st.divider()
-        st.markdown("**Última probabilidad calculada:**")
-        st.write(f"Probabilidad: **{st.session_state.last_probability}** — Ángulo sugerido para servo: **{st.session_state.last_angle}°**")
+                audio_bytes = None
+                if _HAS_GTTS:
+                    try:
+                        tts = gTTS(text, lang="es")
+                        bio = io.BytesIO()
+                        tts.write_to_fp(bio)
+                        bio.seek(0)
+                        audio_bytes = bio.read()
+                        st.audio(audio_bytes, format="audio/mp3")
+                    except Exception as e:
+                        st.error(f"Error gTTS: {e}")
+                elif _HAS_PYTTSX3:
+                    try:
+                        engine = pyttsx3.init()
+                        tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+                        engine.save_to_file(text, tmp.name)
+                        engine.runAndWait()
+                        with open(tmp.name, "rb") as f:
+                            st.audio(f.read(), format="audio/wav")
+                    except Exception as e:
+                        st.error(f"Error pyttsx3: {e}")
+                else:
+                    st.error("No hay motor TTS disponible.")
 
 if not api_key:
     st.warning("Por favor, ingresa tu Clave Mágica para invocar al Oráculo.")
