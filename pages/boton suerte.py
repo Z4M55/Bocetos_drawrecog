@@ -5,11 +5,12 @@ import json
 import platform
 import random
 
-# Muestra la versión de Python junto con detalles adicionales
-st.write("Versión de Python:", platform.python_version())
 
 
-with open(image_file, "rb") as f:
+#FONDO 
+def set_background(image_file: str):
+   
+    with open(image_file, "rb") as f:
         encoded = base64.b64encode(f.read()).decode()
     st.markdown(
         f"""
@@ -24,6 +25,13 @@ with open(image_file, "rb") as f:
         """,
       unsafe_allow_html=True
     )
+
+
+# Muestra la versión de Python junto con detalles adicionales
+st.write("Versión de Python:", platform.python_version())
+
+
+
 
 values = 0.0
 act1="OFF"
