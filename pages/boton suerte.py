@@ -33,12 +33,6 @@ client1.on_message = on_message
 
 st.title("Buena suerte")
 
-    
-else:
-    st.write('')
-
-values = st.slider('Selecciona el rango de valores',0.0, 100.0)
-st.write('Values:', values)
 
 if st.button('suerte'):
 
