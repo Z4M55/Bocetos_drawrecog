@@ -25,7 +25,7 @@ def on_message(client, userdata, message):
 
 broker="157.230.214.127"
 port=1883
-client1= paho.Client("Prueba_20GIT-HUB")
+client1= paho.Client("STREAMLIT_MYSTIC_PUB")
 client1.on_message = on_message
 
 
