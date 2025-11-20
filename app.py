@@ -15,22 +15,22 @@ import paho.mqtt.client as paho
 # Fondo de la app
 # ============================
 #def set_background(image_file: str):
-    """Pone una imagen de fondo en toda la app de Streamlit."""
+   
 #    with open(image_file, "rb") as f:
 #        encoded = base64.b64encode(f.read()).decode()
 #    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-image: url("data:image/png;base64,{encoded}");
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }}
-        </style>
-        """,
-  #      unsafe_allow_html=True
-    )
+#        f"""
+#        <style>
+#        .stApp {{
+#            background-image: url("data:image/png;base64,{encoded}");
+#            background-size: cover;
+#            background-position: center;
+#            background-repeat: no-repeat;
+#        }}
+ #       </style>
+#        """,
+#      unsafe_allow_html=True
+#    )
 
 # ============================
 # Config MQTT (actualizado paho-mqtt 1.6.1)
