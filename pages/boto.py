@@ -64,7 +64,7 @@ st.write('Values:', values)
 
 if st.button('suerte'):
 
-    values = random.randint(0, 100)
+    values = random.choice([30, 60, 150])
     st.write('Values:', values)
 
 
