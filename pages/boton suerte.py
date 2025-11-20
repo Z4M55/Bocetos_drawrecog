@@ -61,7 +61,7 @@ st.title("Buena suerte")
 
 if st.button('suerte'):
 
-    values = random.choice([30, 80, 150])
+    values = random.choice([30, 50, 150])
     st.write('Values:', values)
 
 
