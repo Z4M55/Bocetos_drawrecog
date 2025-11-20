@@ -3,6 +3,7 @@ import time
 import streamlit as st
 import json
 import platform
+import random
 
 # Muestra la versión de Python junto con detalles adicionales
 st.write("Versión de Python:", platform.python_version())
