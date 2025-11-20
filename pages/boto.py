@@ -61,7 +61,12 @@ else:
 values = st.slider('Selecciona el rango de valores',0.0, 100.0)
 st.write('Values:', values)
 
-if st.button('Enviar valor analógico'):
+if st.button('suerte'):
+
+    values = random.randint(0, 100)
+    st.write('Values:', values)
+
+
     client1= paho.Client("GIT-HUB")                           
     client1.on_publish = on_publish                          
     client1.connect(broker,port)   
