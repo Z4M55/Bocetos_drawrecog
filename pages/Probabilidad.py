@@ -9,7 +9,6 @@ import random
 
 #FONDO 
 def set_background(image_file: str):
-   
     with open(image_file, "rb") as f:
         encoded = base64.b64encode(f.read()).decode()
     st.markdown(
@@ -21,10 +20,13 @@ def set_background(image_file: str):
             background-position: center;
             background-repeat: no-repeat;
         }}
-       </style>
+        </style>
         """,
-      unsafe_allow_html=True
+        unsafe_allow_html=True
     )
+
+# Usa la imagen
+set_background("fondo.png")   # ← Asegúrate que esté en la misma carpeta
 
 
 # Muestra la versión de Python junto con detalles adicionales
