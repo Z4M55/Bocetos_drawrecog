@@ -26,7 +26,7 @@ def set_background(image_file: str):
     )
 
 # Usa la imagen
-set_background("fondo.png")   # ← Asegúrate que esté en la misma carpeta
+set_background("fondo_bosque.png")   # ← Asegúrate que esté en la misma carpeta
 
 
 # Muestra la versión de Python junto con detalles adicionales
