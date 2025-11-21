@@ -211,7 +211,7 @@ if st.session_state.analysis_done:
     st.divider()
     st.subheader("¿Quieres saber qué tan probable es este futuro? -> Ve a la página - Probabilidad") 
    
-   advice_button = st.button("Escuchar el consejo del destino")
+advice_button = st.button("Escuchar el consejo del destino")
 
     # CONSEJO DEL DESTINO
     if advice_button:
