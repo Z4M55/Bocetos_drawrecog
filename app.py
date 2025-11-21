@@ -209,8 +209,8 @@ if st.session_state.analysis_done:
     st.markdown(st.session_state.full_response)
 
     st.divider()
-    st.subheader("¿Quieres saber qué tan probable es este futuro?")
-   st.text("Ve a la página - Probabilidad")
+    st.subheader("¿Quieres saber qué tan probable es este futuro?"
+      st.text("Ve a la página - Probabilidad")
 
    advice_button = st.button("Escuchar el consejo del destino")
 
