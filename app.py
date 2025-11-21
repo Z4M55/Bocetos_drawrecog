@@ -210,12 +210,9 @@ if st.session_state.analysis_done:
 
     st.divider()
     st.subheader("¿Quieres saber qué tan probable es este futuro?")
+   st.text("Ve a la página - Probabilidad")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        want_prob = st.button("Sí, muéstrame la probabilidad")
-    with col2:
-        advice_button = st.button("Escuchar el consejo del destino")
+   advice_button = st.button("Escuchar el consejo del destino")
 
     # CONSEJO DEL DESTINO
     if advice_button:
@@ -256,100 +253,99 @@ if st.session_state.analysis_done:
             st.error(f"No se pudo generar el audio: {e}")
 
     # PROBABILIDAD DEL FUTURO
-    if want_prob:
-        if not api_key:
-            st.error("Necesitas ingresar tu Clave Mágica (API Key).")
-        else:
-            with st.spinner("El Oráculo está evaluando la probabilidad..."):
+    #if want_prob:
+    #    if not api_key:
+    #        st.error("Necesitas ingresar tu Clave Mágica (API Key).")
+    #    else:
+    #        with st.spinner("El Oráculo está evaluando la probabilidad..."):
 
-                prob_prompt = (
-                    "Evalúa esta predicción y devuelve JSON:\n"
-                    f"{st.session_state.full_response}\n\n"
-                    "{\"label\":\"ALTO|MEDIO|BAJO\",\"confidence\":0-100,\"reason\":\"breve\"}"
-                )
+   #           prob_prompt = (
+   #                 "Evalúa esta predicción y devuelve JSON:\n"
+   #                 f"{st.session_state.full_response}\n\n"
+   #                 "{\"label\":\"ALTO|MEDIO|BAJO\",\"confidence\":0-100,\"reason\":\"breve\"}"
+   #             )
 
-                try:
-                    prob_resp = openai.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=[{"role": "user", "content": prob_prompt}],
-                        max_tokens=150,
-                    )
+   #             try:
+   #                 prob_resp = openai.chat.completions.create(
+   #                     model="gpt-4o-mini",
+   #                     messages=[{"role": "user", "content": prob_prompt}],
+   #                     max_tokens=150,
+   #                 )
 
-                    prob_text = prob_resp.choices[0].message.content.strip()
-                    try:
-                        prob_json = json.loads(prob_text)
-                    except:
-                        prob_json = {"label": "MEDIO", "confidence": 50, "reason": "Auto-generado."}
+   #                prob_text = prob_resp.choices[0].message.content.strip()
+   #                try:
+   #                    prob_json = json.loads(prob_text)
+   #                 except:
+   #                     prob_json = {"label": "MEDIO", "confidence": 50, "reason": "Auto-generado."}
+   #                 label = prob_json.get("label", "MEDIO").upper()
+   #                 conf = int(float(prob_json.get("confidence", 50)))
+   #                 conf = max(0, min(100, conf))
 
-                    label = prob_json.get("label", "MEDIO").upper()
-                    conf = int(float(prob_json.get("confidence", 50)))
-                    conf = max(0, min(100, conf))
+   #                 angle_map = {"ALTO": 160, "MEDIO": 90, "BAJO": 20}
+   #                 servo_angle = angle_map.get(label, 90)
 
-                    angle_map = {"ALTO": 160, "MEDIO": 90, "BAJO": 20}
-                    servo_angle = angle_map.get(label, 90)
-
-                    st.session_state.probability_result = {
-                        "label": label,
-                        "confidence": conf,
-                        "reason": prob_json.get("reason", "")
+   #                 st.session_state.probability_result = {
+   #                     "label": label,
+   #                     "confidence": conf,
+   #                     "reason": prob_json.get("reason", "")
                     }
-                    st.session_state.servo_angle = servo_angle
+   #                 st.session_state.servo_angle = servo_angle
 
-                    st.success(f"Probabilidad: **{label}** — Confianza: **{conf}%**")
-                    st.markdown(f"**Motivo:** {prob_json.get('reason', '')}")
-                    st.markdown(f"Ángulo sugerido: **{servo_angle}°**")
+   #                 st.success(f"Probabilidad: **{label}** — Confianza: **{conf}%**")
+   #                 st.markdown(f"**Motivo:** {prob_json.get('reason', '')}")
+   #                 st.markdown(f"Ángulo sugerido: **{servo_angle}°**")
 
-                except Exception as e:
-                    st.error(f"No se pudo evaluar la probabilidad: {e}")
+   #             except Exception as e:
+   #                 st.error(f"No se pudo evaluar la probabilidad: {e}")
 
     # ===============================
     # BLOQUE DE ARDUINO + MQTT
     # ===============================
-    if st.session_state.probability_result is not None:
-        st.divider()
-        st.subheader("Implementación en Servo (Arduino)")
-        st.markdown(f"""
-        - Etiqueta: `{st.session_state.probability_result['label']}`
-        - Confianza: `{st.session_state.probability_result['confidence']}%`
-        - Ángulo sugerido: `{st.session_state.servo_angle}°`
-        """)
+   # if st.session_state.probability_result is not None:
+   #     st.divider()
+   #     st.subheader("Implementación en Servo (Arduino)")
+   #     st.markdown(f"""
+   #     - Etiqueta: `{st.session_state.probability_result['label']}`
+   #     - Confianza: `{st.session_state.probability_result['confidence']}%`
+   #     - Ángulo sugerido: `{st.session_state.servo_angle}°`
+   #     """)
 
-        new_val = st.slider("Selecciona el rango de valores", 0.0, 100.0,
-                            st.session_state.slider_value, key="corrected_slider")
+   #     new_val = st.slider("Selecciona el rango de valores", 0.0, 100.0,
+   #                         st.session_state.slider_value, key="corrected_slider")
 
-        st.session_state.slider_value = new_val
-        st.write("Valor seleccionado:", new_val)
+   #     st.session_state.slider_value = new_val
+   #     st.write("Valor seleccionado:", new_val)
 
-        col_send1, col_send2 = st.columns(2)
-        with col_send1:
-            if st.button("Enviar ON al ESP32"):
-                ok, err = mqtt_publish("cmqtt_s", {"Act1": "ON"})
-                st.success("ON enviado") if ok else st.error(err)
+   #     col_send1, col_send2 = st.columns(2)
+   #     with col_send1:
+   #         if st.button("Enviar ON al ESP32"):
+   #             ok, err = mqtt_publish("cmqtt_s", {"Act1": "ON"})
+   #             st.success("ON enviado") if ok else st.error(err)
 
-        with col_send2:
-            if st.button("Enviar OFF al ESP32"):
-                ok, err = mqtt_publish("cmqtt_s", {"Act1": "OFF"})
-                st.success("OFF enviado") if ok else st.error(err)
+   #     with col_send2:
+   #         if st.button("Enviar OFF al ESP32"):
+   #             ok, err = mqtt_publish("cmqtt_s", {"Act1": "OFF"})
+   #             st.success("OFF enviado") if ok else st.error(err)
 
-        if st.button("Enviar ángulo sugerido al ESP32"):
-            servo_angle_deg = st.session_state.servo_angle or 90
-            percent = round((servo_angle_deg / 180) * 100, 2)
+   #     if st.button("Enviar ángulo sugerido al ESP32"):
+   #         servo_angle_deg = st.session_state.servo_angle or 90
+   #         percent = round((servo_angle_deg / 180) * 100, 2)
 
-            ok, err = mqtt_publish("cmqtt_a", {"Analog": percent})
-            if ok:
-                st.success(f"Publicado: {percent}")
-                st.session_state.last_mqtt_publish = f"Sugerido: {percent}"
-            else:
-                st.error(err)
+   #         ok, err = mqtt_publish("cmqtt_a", {"Analog": percent})
+   #         if ok:
+   #             st.success(f"Publicado: {percent}")
+   #             st.session_state.last_mqtt_publish = f"Sugerido: {percent}"
+   #         else:
+   #             st.error(err)
 
-        if st.button("Enviar valor manual al ESP32"):
-            val = float(st.session_state.slider_value)
-            ok, err = mqtt_publish("cmqtt_a", {"Analog": val})
-            if ok:
-                st.success(f"Enviado: {val}")
-                st.session_state.last_mqtt_publish = f"Manual: {val}"
-            else:
-                st.error(err)
+   #     if st.button("Enviar valor manual al ESP32"):
+   #         val = float(st.session_state.slider_value)
+   #         ok, err = mqtt_publish("cmqtt_a", {"Analog": val})
+   #         if ok:
+   #             st.success(f"Enviado: {val}")
+   #             st.session_state.last_mqtt_publish = f"Manual: {val}"
+   #         else:
+   #             st.error(err)
 
-        st.markdown("**Última publicación MQTT:**")
-        st.write(st.session_state.last_mqtt_publish)
+   #     st.markdown("**Última publicación MQTT:**")
+   #     st.write(st.session_state.last_mqtt_publish)
